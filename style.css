@@ -77,6 +77,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   padding: 0 8px calc(12px + env(safe-area-inset-bottom, 0px));
   overflow-y: auto; flex: 1;
 }
+.list:empty { flex: none; }
 .list li {
   padding: 10px 12px;
   border-radius: 8px;
