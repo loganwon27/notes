@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#fafaf9" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#141414" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Notes">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="style.css">
+  <title>Notes</title>
+</head>
+<body>
+  <aside class="sidebar">
+    <header class="bar">
+      <input id="search" type="search" placeholder="Search" autocomplete="off" aria-label="Search notes">
+      <button id="new" class="icon-btn" aria-label="New note" title="New note">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+    </header>
+    <ul id="list" class="list"></ul>
+    <p id="empty" class="empty" hidden>No notes yet</p>
+  </aside>
+
+  <main class="editor">
+    <header class="bar editor-bar">
+      <button id="back" class="icon-btn back" aria-label="Back to notes">
+        <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <span id="meta" class="meta"></span>
+      <button id="pin" class="icon-btn" aria-label="Pin note" title="Pin">
+        <svg viewBox="0 0 24 24"><path d="M9 4h6l-1 6 4 4H6l4-4zM12 14v6"/></svg>
+      </button>
+      <button id="delete" class="icon-btn" aria-label="Delete note" title="Delete">
+        <svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/></svg>
+      </button>
+    </header>
+    <textarea id="text" placeholder="Start writing…" spellcheck="true" aria-label="Note"></textarea>
+  </main>
+
+  <div id="toast" class="toast" role="status" hidden>
+    <span>Note deleted</span><button id="undo">Undo</button>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
