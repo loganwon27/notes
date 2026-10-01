@@ -14,8 +14,15 @@ function load() {
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify(notes)); } catch {}
 }
+// Local edit: save and queue a sync.
+function changed() {
+  save();
+  Sync.soon();
+}
 
-const current = () => notes.find((n) => n.id === currentId);
+// Deleted notes stay in the array (flagged) so the delete can sync.
+const live = () => notes.filter((n) => !n.deleted);
+const current = () => live().find((n) => n.id === currentId);
 const lines = (n) => n.text.split('\n').map((l) => l.trim()).filter(Boolean);
 const titleOf = (n) => lines(n)[0] || 'New note';
 const previewOf = (n) => lines(n)[1] || '';
@@ -32,7 +39,7 @@ function when(ts) {
 
 function sorted() {
   const q = query.toLowerCase();
-  return notes
+  return live()
     .filter((n) => !q || n.text.toLowerCase().includes(q))
     .sort((a, b) => (b.pinned - a.pinned) || (b.updated - a.updated));
 }
@@ -86,19 +93,22 @@ function open(id, { focus = false } = {}) {
 // Leaving a blank note removes it, so "New" never leaves clutter behind.
 function dropIfEmpty(nextId) {
   const n = current();
-  if (n && n.id !== nextId && !n.text.trim()) {
-    notes = notes.filter((x) => x !== n);
-    save();
-  }
+  if (n && n.id !== nextId && !n.text.trim()) remove(n);
 }
 
 function newNote() {
   const now = Date.now();
-  const n = { id: crypto.randomUUID(), text: '', created: now, updated: now, pinned: false };
+  const n = { id: crypto.randomUUID(), text: '', created: now, updated: now, pinned: false, deleted: false };
   notes.push(n);
   query = '';
   $('search').value = '';
   open(n.id, { focus: true });
+}
+
+function remove(n) {
+  n.deleted = true;
+  n.updated = Date.now();
+  changed();
 }
 
 function back() {
@@ -108,8 +118,7 @@ function back() {
 function deleteCurrent() {
   const n = current();
   if (!n) return;
-  notes = notes.filter((x) => x !== n);
-  save();
+  remove(n);
   deleted = n;
   const next = phone.matches ? null : sorted()[0]?.id ?? null;
   currentId = null;
@@ -125,8 +134,9 @@ function showToast() {
 
 function undo() {
   if (!deleted) return;
-  notes.push(deleted);
-  save();
+  deleted.deleted = false;
+  deleted.updated = Date.now();
+  changed();
   const id = deleted.id;
   deleted = null;
   $('toast').hidden = true;
@@ -139,7 +149,7 @@ $('text').addEventListener('input', (e) => {
   if (!n) return;
   n.text = e.target.value;
   n.updated = Date.now();
-  save();
+  changed();
   renderList();
   renderEditor();
 });
@@ -162,7 +172,8 @@ $('pin').addEventListener('click', () => {
   const n = current();
   if (!n) return;
   n.pinned = !n.pinned;
-  save();
+  n.updated = Date.now();
+  changed();
   renderList();
   renderEditor();
 });
@@ -186,12 +197,87 @@ document.addEventListener('keydown', (e) => {
 window.addEventListener('storage', (e) => {
   if (e.key !== KEY) return;
   notes = load();
-  if (!current()) {
+  closeIfGone();
+  renderList();
+  renderEditor();
+});
+
+// Cloud sync
+function closeIfGone() {
+  if (currentId && !current()) {
     currentId = null;
     document.body.classList.remove('editing');
   }
-  renderList();
-  renderEditor();
+}
+
+Sync.init({
+  getNotes: () => notes,
+  merge(incoming) {
+    for (const r of incoming) {
+      const i = notes.findIndex((n) => n.id === r.id);
+      if (i === -1) notes.push(r);
+      else if (r.updated > notes[i].updated) notes[i] = r;
+    }
+    save();
+    closeIfGone();
+    renderList();
+    renderEditor();
+  },
+  onStatus(state) {
+    $('cloud').hidden = state === 'off';
+    $('cloud').dataset.state = state;
+    $('cloud').title = {
+      'signed-out': 'Turn on sync', idle: 'Synced', syncing: 'Syncing…', error: 'Sync problem — tap for details',
+    }[state] || '';
+    renderAccount();
+  },
+});
+
+function renderAccount() {
+  const email = Sync.email();
+  $('signed-in').hidden = !email;
+  $('auth-form').hidden = !!email;
+  $('auth-msg').hidden = !!email;
+  $('who').textContent = email ? `Signed in as ${email}. Your notes sync automatically.` : '';
+}
+
+function authMessage(text) {
+  $('auth-msg').textContent = text;
+}
+
+$('cloud').addEventListener('click', () => {
+  authMessage($('cloud').dataset.state === 'error'
+    ? 'Last sync failed. It retries automatically when you are back online.'
+    : 'Sign in to keep your notes in sync on all your devices.');
+  renderAccount();
+  $('account').showModal();
+});
+$('account-done').addEventListener('click', () => $('account').close());
+$('account').addEventListener('click', (e) => { if (e.target === $('account')) $('account').close(); });
+
+$('auth-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const creating = e.submitter?.id === 'signup';
+  const email = $('email').value.trim();
+  const password = $('password').value;
+  authMessage(creating ? 'Creating account…' : 'Signing in…');
+  try {
+    if (creating) {
+      const confirm = await Sync.signUp(email, password);
+      authMessage(confirm ? 'Check your email to confirm, then sign in here.' : 'Account created. Syncing…');
+    } else {
+      await Sync.signIn(email, password);
+      $('password').value = '';
+      authMessage('Signed in. Syncing…');
+    }
+  } catch (err) {
+    authMessage(err.message || 'Something went wrong.');
+  }
+});
+
+$('signout').addEventListener('click', async () => {
+  await Sync.signOut();
+  authMessage('Signed out. Your notes stay on this device.');
 });
 
 // Start: on a computer open the latest note; on a phone show the list.

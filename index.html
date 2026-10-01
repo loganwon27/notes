@@ -18,6 +18,9 @@
   <aside class="sidebar">
     <header class="bar">
       <input id="search" type="search" placeholder="Search" autocomplete="off" aria-label="Search notes">
+      <button id="cloud" class="icon-btn cloud" aria-label="Sync" hidden>
+        <svg viewBox="0 0 24 24"><path d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 10.5 3.75 3.75 0 0 0 7 18z"/></svg>
+      </button>
       <button id="new" class="icon-btn" aria-label="New note" title="New note">
         <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
       </button>
@@ -46,6 +49,27 @@
     <span>Note deleted</span><button id="undo">Undo</button>
   </div>
 
+  <dialog id="account">
+    <h2>Sync</h2>
+    <p id="auth-msg" class="hint"></p>
+    <form id="auth-form">
+      <input id="email" type="email" placeholder="Email" autocomplete="email" required>
+      <input id="password" type="password" placeholder="Password (6+ characters)" autocomplete="current-password" minlength="6" required>
+      <div class="row">
+        <button id="signin" class="primary" type="submit">Sign in</button>
+        <button id="signup" type="submit">Create account</button>
+      </div>
+    </form>
+    <div id="signed-in" hidden>
+      <p id="who"></p>
+      <div class="row"><button id="signout" type="button">Sign out</button></div>
+    </div>
+    <button id="account-done" class="done" type="button">Done</button>
+  </dialog>
+
+  <script src="vendor/supabase.js"></script>
+  <script src="config.js"></script>
+  <script src="sync.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
